@@ -12,17 +12,17 @@
     />
     <style>
 :root {
-  --bg-0: #050403;
-  --bg-1: #0c0a08;
-  --gold: #e8b86a;
-  --gold-bright: #ffd89a;
-  --gold-dim: #8a6a3a;
-  --amber: #c8792e;
-  --cream: #f3e6d0;
-  --ink: #1a1510;
-  --glass: rgba(232, 184, 106, 0.08);
-  --line: rgba(232, 184, 106, 0.22);
-  --dock-bg: rgba(8, 6, 4, 0.72);
+  --bg-0: #030805;
+  --bg-1: #06100a;
+  --gold: #3ecf7a;
+  --gold-bright: #7aefb0;
+  --gold-dim: #2a7a4a;
+  --amber: #e8d44a;
+  --cream: #d8f5e0;
+  --ink: #0a1510;
+  --glass: rgba(62, 207, 122, 0.08);
+  --line: rgba(62, 207, 122, 0.22);
+  --dock-bg: rgba(4, 10, 6, 0.72);
   --font-display: "Syne", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
@@ -48,8 +48,8 @@ body {
   width: 100%;
   height: 100%;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 45%, #1a1208 0%, transparent 55%),
-    radial-gradient(ellipse 100% 100% at 50% 100%, #120c06 0%, var(--bg-0) 55%);
+    radial-gradient(ellipse 80% 60% at 50% 45%, #0a1a12 0%, transparent 55%),
+    radial-gradient(ellipse 100% 100% at 50% 100%, #06140c 0%, var(--bg-0) 55%);
 }
 
 #stage {
@@ -139,14 +139,14 @@ body {
   height: 3rem;
   padding: 0;
   border-radius: 50%;
-  background: rgba(232, 184, 106, 0.15);
-  border-color: rgba(232, 184, 106, 0.4);
+  background: rgba(62, 207, 122, 0.15);
+  border-color: rgba(62, 207, 122, 0.4);
   color: #fff;
 }
 
 .icon-btn:hover:not(:disabled) {
-  background: rgba(232, 184, 106, 0.25);
-  border-color: rgba(232, 184, 106, 0.6);
+  background: rgba(62, 207, 122, 0.25);
+  border-color: rgba(62, 207, 122, 0.6);
 }
 
 .secondary-btn {
@@ -163,8 +163,8 @@ body {
 }
 
 .btn:hover:not(:disabled) {
-  background: rgba(232, 184, 106, 0.18);
-  border-color: rgba(232, 184, 106, 0.45);
+  background: rgba(62, 207, 122, 0.18);
+  border-color: rgba(62, 207, 122, 0.45);
 }
 
 .btn:disabled {
@@ -527,21 +527,31 @@ body {
   }
 
   // src/visual/core.ts
+  var prevBeat = 0;
+  var anticip = 0;
   function drawCoreAndRings(ctx, cx, cy, baseR, frame2) {
     const { bass, lowMid, mid, high, bassPulse, midPulse, highPulse, beatPulse } = frame2;
-    const coreR = baseR * (0.28 - bass * 0.03 + bassPulse * 0.09 + beatPulse * 0.04);
-    const squash = 1 - beatPulse * 0.08;
-    const stretch = 1 + beatPulse * 0.08;
+    const dBeat = beatPulse - prevBeat;
+    prevBeat = beatPulse;
+    if (dBeat > 0.08) anticip = 1;
+    anticip = Math.max(0, anticip - frame2.dt * 8);
+    const coreFocus = clamp(1 + bassPulse * 0.4 - highPulse * 0.25, 0.6, 1.4);
+    const coreR = baseR * (0.28 - bass * 0.03 + bassPulse * 0.09 + beatPulse * 0.04 - anticip * 0.035);
+    const squash = 1 - beatPulse * 0.06 - anticip * 0.04;
+    const stretch = 1 + beatPulse * 0.07 * (1 - anticip);
     const glowR = coreR * (2.4 + lowMid * 0.5);
     const glow = ctx.createRadialGradient(cx, cy, coreR * 0.2, cx, cy, glowR);
-    glow.addColorStop(0, `rgba(255, 216, 154, ${clamp(0.25 + bass * 0.2 + bassPulse * 0.15, 0, 0.6)})`);
-    glow.addColorStop(0.35, `rgba(200, 121, 46, ${clamp(0.15 + lowMid * 0.15, 0, 0.4)})`);
+    glow.addColorStop(
+      0,
+      `rgba(122, 239, 176, ${clamp((0.22 + bass * 0.18 + bassPulse * 0.18) * coreFocus, 0, 0.55)})`
+    );
+    glow.addColorStop(0.35, `rgba(46, 160, 90, ${clamp(0.12 + lowMid * 0.12, 0, 0.35)})`);
     glow.addColorStop(1, "rgba(0, 0, 0, 0)");
     ctx.fillStyle = glow;
     ctx.save();
     ctx.translate(cx, cy);
-    const tiltX = Math.sin(frame2.time * 0.7) * mid * 0.1;
-    const tiltY = Math.cos(frame2.time * 0.8) * mid * 0.1;
+    const tiltX = Math.sin(frame2.time * 0.7) * mid * 0.08;
+    const tiltY = Math.cos(frame2.time * 0.8) * mid * 0.08;
     ctx.transform(1, tiltY, tiltX, 1, 0, 0);
     ctx.beginPath();
     ctx.scale(stretch, squash);
@@ -550,10 +560,13 @@ body {
     ctx.beginPath();
     ctx.arc(0, 0, coreR, 0, Math.PI * 2);
     ctx.clip();
-    const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR);
-    coreGrad.addColorStop(0, "#ffe4b5");
-    coreGrad.addColorStop(0.5, "#d48c36");
-    coreGrad.addColorStop(1, "#5c2b09");
+    const hx = -coreR * 0.22;
+    const hy = -coreR * 0.28;
+    const coreGrad = ctx.createRadialGradient(hx, hy, 0, 0, 0, coreR);
+    coreGrad.addColorStop(0, "#e8ffe8");
+    coreGrad.addColorStop(0.35, "#5ee89a");
+    coreGrad.addColorStop(0.7, "#1f9a55");
+    coreGrad.addColorStop(1, "rgba(12, 60, 32, 0.35)");
     ctx.fillStyle = coreGrad;
     ctx.fill();
     ctx.globalCompositeOperation = "screen";
@@ -563,10 +576,10 @@ body {
       const ox = Math.sin(frame2.time * 0.5 + i) * coreR * 0.3;
       const oy = Math.cos(frame2.time * 0.4 - i) * coreR * 0.3;
       const nebGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, coreR * 1.2);
-      const r = 200 + i * 20;
-      const g = 100 + mid * 100;
-      const b = 50 + high * 150;
-      nebGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${0.3 + bassPulse * 0.2})`);
+      const r = 40 + i * 20 + mid * 120;
+      const g = 180 + i * 20;
+      const b = 60 + high * 40;
+      nebGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${clamp(0.25 + bassPulse * 0.15, 0, 0.45)})`);
       nebGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
       ctx.fillStyle = nebGrad;
       ctx.beginPath();
@@ -575,8 +588,8 @@ body {
       ctx.restore();
     }
     ctx.globalCompositeOperation = "source-over";
-    ctx.strokeStyle = `rgba(255, 236, 200, ${clamp(0.4 + beatPulse * 0.4, 0, 0.8)})`;
-    ctx.lineWidth = 1.5 + bassPulse * 1.5;
+    ctx.strokeStyle = `rgba(200, 255, 180, ${clamp((0.35 + beatPulse * 0.3) * coreFocus, 0, 0.7)})`;
+    ctx.lineWidth = 1.4 + bassPulse;
     ctx.beginPath();
     ctx.arc(0, 0, coreR * 0.98, 0, Math.PI * 2);
     ctx.stroke();
@@ -585,44 +598,48 @@ body {
     ctx.translate(cx, cy);
     ctx.transform(1, tiltY * 0.5, tiltX * 0.5, 1, 0, 0);
     const rings = [
-      { mul: 1.35, a: 0.15 + lowMid * 0.2 + midPulse * 0.15, w: 1.2 },
-      { mul: 1.7, a: 0.1 + mid * 0.2 + highPulse * 0.1, w: 1 },
-      { mul: 2.15, a: 0.06 + lowMid * 0.1, w: 0.8 },
-      { mul: 2.65, a: 0.04 + high * 0.1 + beatPulse * 0.06, w: 0.7 }
+      { mul: 1.4, a: 0.08 + lowMid * 0.1 + midPulse * 0.06, w: 1.1 },
+      { mul: 2.35, a: 0.035 + lowMid * 0.05 + beatPulse * 0.04, w: 0.7 }
     ];
     for (let i = 0; i < rings.length; i++) {
       const ring = rings[i];
-      const breathe = 1 + Math.sin(frame2.time * (0.8 + i * 0.15) + i) * 0.01 * (1 + lowMid);
-      const r = baseR * ring.mul * breathe * (1 + lowMid * 0.03 + beatPulse * 0.02);
-      ctx.strokeStyle = `rgba(232, 184, 106, ${clamp(ring.a, 0, 0.6)})`;
-      ctx.lineWidth = ring.w + midPulse * 0.6;
+      const breathe = 1 + Math.sin(frame2.time * (0.7 + i * 0.2) + i) * 8e-3 * (1 + lowMid);
+      const r = baseR * ring.mul * breathe * (1 + lowMid * 0.025);
+      ctx.strokeStyle = `rgba(62, 207, 122, ${clamp(ring.a, 0, 0.18)})`;
+      ctx.lineWidth = ring.w;
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.stroke();
-      if (i % 2 === 1) {
+      if (i === 0 && beatPulse > 0.3) {
         ctx.save();
-        ctx.setLineDash([6, 10]);
-        ctx.strokeStyle = `rgba(255, 216, 154, ${clamp(0.06 + high * 0.1, 0, 0.3)})`;
-        ctx.lineWidth = 0.8;
+        ctx.setLineDash([6, 12]);
+        ctx.strokeStyle = `rgba(232, 212, 74, ${clamp((beatPulse - 0.3) * 0.25, 0, 0.18)})`;
+        ctx.lineWidth = 0.7;
         ctx.beginPath();
         ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
     }
-    const tickR = baseR * lerp(1.7, 1.78, mid);
-    const ticks = 48;
+    ctx.strokeStyle = `rgba(62, 207, 122, ${0.03 + high * 0.02})`;
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, baseR * 3.6, 0, Math.PI * 2);
+    ctx.stroke();
+    const tickR = baseR * lerp(1.65, 1.72, mid);
+    const ticks = 36;
+    const spinRate = 0.12 * (1 + lowMid * 0.6);
     ctx.save();
-    ctx.rotate(frame2.time * 0.15);
+    ctx.rotate(frame2.time * spinRate);
     for (let i = 0; i < ticks; i++) {
       const a = i / ticks * Math.PI * 2;
-      const len = 4 + (i % 4 === 0 ? 6 : 0) + high * 6;
+      const len = 3 + (i % 4 === 0 ? 4 : 0) + high * 3;
       const x0 = Math.cos(a) * tickR;
       const y0 = Math.sin(a) * tickR;
       const x1 = Math.cos(a) * (tickR + len);
       const y1 = Math.sin(a) * (tickR + len);
-      ctx.strokeStyle = `rgba(232, 184, 106, ${clamp(0.1 + high * 0.2, 0, 0.5)})`;
-      ctx.lineWidth = i % 4 === 0 ? 1.2 : 0.6;
+      ctx.strokeStyle = `rgba(62, 207, 122, ${clamp(0.06 + high * 0.08, 0, 0.2)})`;
+      ctx.lineWidth = i % 4 === 0 ? 1 : 0.5;
       ctx.beginPath();
       ctx.moveTo(x0, y0);
       ctx.lineTo(x1, y1);
@@ -640,19 +657,20 @@ body {
     const n = Math.floor(frequency.length * 0.75);
     for (let i = 0; i < bins; i++) {
       const t = i / bins;
-      const distFromBottom = Math.abs(t - 0.5) * 2;
-      const freqT = Math.pow(distFromBottom, 1.5);
+      const mirrored = t < 0.5 ? t * 2 : (1 - t) * 2;
+      const freqT = Math.pow(1 - mirrored, 1.5);
       const centerIdx = Math.floor(freqT * (n - 1));
       let sum = 0;
       let count = 0;
-      const window2 = Math.max(1, Math.floor(freqT * 4));
+      const window2 = Math.max(1, Math.floor((1 - freqT) * 3) + 1);
       for (let j = Math.max(0, centerIdx - window2); j <= Math.min(n - 1, centerIdx + window2); j++) {
         sum += frequency[j];
         count++;
       }
-      const raw = sum / count / 255;
+      const raw = sum / (count * 255);
       const mapped = Math.pow(raw, 0.65);
-      target[i] = lerp(target[i], mapped, lerpT);
+      const asym = 0.97 + 0.03 * Math.sin(t * Math.PI * 4 + freqT * 2);
+      target[i] = lerp(target[i], mapped * asym, lerpT);
     }
     const temp = new Float32Array(bins);
     for (let i = 0; i < bins; i++) {
@@ -663,14 +681,12 @@ body {
       const next2 = target[(i + 2) % bins];
       temp[i] = prev2 * 0.1 + prev1 * 0.2 + cur * 0.4 + next1 * 0.2 + next2 * 0.1;
     }
-    for (let i = 0; i < bins; i++) {
-      target[i] = temp[i];
-    }
+    for (let i = 0; i < bins; i++) target[i] = temp[i];
   }
   function radiusAt(smoothed, idx, bins, base, amp, detail, time, spin) {
     const v = smoothed[idx];
     const a = idx / bins * Math.PI * 2 - Math.PI / 2 + spin;
-    const wobble = Math.sin(a * 3 + time * 1.1) * 0.015 + Math.sin(a * 7 - time * 0.7) * 0.01 + Math.sin(a * 13 + time * 1.6) * 5e-3 * detail;
+    const wobble = Math.sin(a * 3 + time * 1.1) * 0.012 + Math.sin(a * 7 - time * 0.7) * 8e-3 + Math.sin(a * 13 + time * 1.6) * 4e-3 * detail;
     return base + v * amp + base * wobble * (0.5 + detail);
   }
   function traceRing(ctx, cx, cy, smoothed, bins, base, amp, detail, time, spin, close) {
@@ -686,38 +702,58 @@ body {
     }
     if (close) ctx.closePath();
   }
+  function freqWeightAt(t) {
+    const mirrored = t < 0.5 ? t * 2 : (1 - t) * 2;
+    return 1 - mirrored;
+  }
   function drawCircularWaveform(ctx, cx, cy, baseR, frame2) {
-    const { frequency, bass, lowMid, mid, high, beatPulse, time, dt } = frame2;
+    const {
+      frequency,
+      bass,
+      lowMid,
+      mid,
+      high,
+      beatPulse,
+      bassPulse,
+      highPulse,
+      midRipple,
+      waveBoost,
+      time,
+      dt
+    } = frame2;
     sampleSpectrum(frequency, BINS, smoothData, 0.4);
     for (let i = 0; i < BINS; i++) {
-      trailData[i] = Math.max(smoothData[i], trailData[i] - dt * 1.5);
+      trailData[i] = Math.max(smoothData[i], trailData[i] - dt * 1.2);
     }
     const waveBase = baseR * (1.9 + bass * 0.08 + beatPulse * 0.03);
-    const waveAmp = waveBase * (0.35 + lowMid * 0.2 + beatPulse * 0.1);
-    const spin = time * 0.05;
+    const waveAmp = waveBase * (0.32 + lowMid * 0.18 + beatPulse * 0.08 + midRipple * 0.06);
+    const spin = time * (0.04 * (1 + lowMid * 0.6));
+    const waveFocus = clamp(1 + highPulse * 0.35 - bassPulse * 0.25, 0.55, 1.35);
+    const boost = 1 + waveBoost * 0.35;
     traceRing(ctx, cx, cy, smoothData, BINS, waveBase, waveAmp, mid + bass, time, spin, true);
     const fill = ctx.createRadialGradient(cx, cy, waveBase * 0.6, cx, cy, waveBase + waveAmp);
-    fill.addColorStop(0, "rgba(200, 121, 46, 0.0)");
-    fill.addColorStop(0.6, `rgba(232, 184, 106, ${0.05 + lowMid * 0.08})`);
-    fill.addColorStop(1, `rgba(255, 170, 70, ${0.03 + beatPulse * 0.06})`);
+    fill.addColorStop(0, "rgba(30, 120, 60, 0.0)");
+    fill.addColorStop(0.6, `rgba(62, 207, 122, ${(0.04 + lowMid * 0.06) * waveFocus})`);
+    fill.addColorStop(1, `rgba(232, 212, 74, ${(0.025 + beatPulse * 0.05) * waveFocus})`);
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     traceRing(ctx, cx, cy, trailData, BINS, waveBase * 1.02, waveAmp * 1.05, mid, time, spin, true);
-    ctx.strokeStyle = `rgba(255, 100, 50, ${clamp(0.15 + beatPulse * 0.2, 0, 0.5)})`;
-    ctx.lineWidth = 1.5;
-    ctx.shadowColor = "rgba(255, 100, 50, 0.5)";
-    ctx.shadowBlur = 12;
+    ctx.strokeStyle = `rgba(232, 212, 74, ${clamp((0.12 + beatPulse * 0.15) * waveFocus, 0, 0.4)})`;
+    ctx.lineWidth = 1.4;
+    ctx.shadowColor = "rgba(232, 212, 74, 0.35)";
+    ctx.shadowBlur = 10;
     ctx.stroke();
     traceRing(ctx, cx, cy, smoothData, BINS, waveBase, waveAmp, mid + bass, time, spin, true);
-    ctx.strokeStyle = `rgba(255, 216, 154, ${clamp(0.4 + mid * 0.4 + beatPulse * 0.3, 0, 0.85)})`;
-    ctx.lineWidth = 2 + high * 1.5 + beatPulse * 1.5;
-    ctx.shadowColor = "rgba(255, 170, 60, 0.6)";
-    ctx.shadowBlur = 16 + beatPulse * 20;
+    const mainA = clamp((0.35 + mid * 0.3 + beatPulse * 0.2 + midRipple * 0.15) * waveFocus * boost, 0, 0.78);
+    ctx.strokeStyle = `rgba(122, 239, 176, ${mainA})`;
+    ctx.lineWidth = 2 + high * 1.2 + beatPulse + midRipple * 0.8;
+    ctx.shadowColor = "rgba(62, 207, 122, 0.5)";
+    ctx.shadowBlur = clamp(12 + beatPulse * 14, 0, 28);
     ctx.stroke();
     ctx.restore();
-    const teeth = 120;
+    const teeth = 96;
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (let i = 0; i < teeth; i++) {
@@ -726,13 +762,14 @@ body {
       const energy = smoothData[fi];
       if (energy < 0.08) continue;
       const a = t * Math.PI * 2 - Math.PI / 2 + spin;
-      const len = energy * waveAmp * (0.4 + i % 3 * 0.15);
+      const len = energy * waveAmp * (0.35 + i % 3 * 0.12);
       const r0 = waveBase - 4;
       const r1 = r0 + len;
-      const isTop = Math.abs(t - 0.5) > 0.3;
-      const color = isTop ? `rgba(200, 230, 255, ${0.1 + energy * 0.4})` : `rgba(255, 180, 80, ${0.1 + energy * 0.5})`;
+      const fw = freqWeightAt(t);
+      const yellow = fw > 0.55 && energy > 0.12;
+      const color = yellow ? `rgba(255, 230, 100, ${clamp(0.08 + energy * 0.35 * high, 0, 0.45)})` : `rgba(80, 220, 130, ${clamp(0.08 + energy * 0.4, 0, 0.5)})`;
       ctx.strokeStyle = color;
-      ctx.lineWidth = i % 4 === 0 ? 1.6 : 0.8;
+      ctx.lineWidth = i % 4 === 0 ? 1.4 : 0.7;
       ctx.beginPath();
       ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
       ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
@@ -740,28 +777,29 @@ body {
     }
     ctx.restore();
     const { waveform } = frame2;
-    const steps = 128;
+    const steps = 96;
     ctx.beginPath();
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const wi = Math.floor(t * (waveform.length - 1));
       const sample = (waveform[wi] - 128) / 128;
       const a = t * Math.PI * 2 - Math.PI / 2;
-      const r = baseR * 1.05 + sample * baseR * (0.1 + bass * 0.12);
+      const r = baseR * 1.05 + sample * baseR * (0.08 + bass * 0.1);
       const x = cx + Math.cos(a) * r;
       const y = cy + Math.sin(a) * r;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     ctx.closePath();
-    ctx.strokeStyle = `rgba(243, 230, 208, ${0.14 + bass * 0.25})`;
-    ctx.lineWidth = 1.1;
+    ctx.strokeStyle = `rgba(216, 245, 224, ${clamp(0.1 + bass * 0.18, 0, 0.35)})`;
+    ctx.lineWidth = 1;
     ctx.stroke();
+    return waveBase;
   }
 
   // src/visual/particles.ts
   var ParticleSystem = class {
-    constructor(capacity = 2800) {
+    constructor(capacity = 2200) {
       __publicField(this, "pool", []);
       __publicField(this, "reduced", false);
       __publicField(this, "emitAcc", 0);
@@ -812,25 +850,25 @@ body {
       p.life = life;
       p.size = size;
       p.hue = Math.random();
-      p.glow = kind === "ember" ? 1.8 : kind === "spark" ? 1.4 : kind === "streak" ? 1.1 : 0.85;
+      p.glow = kind === "ember" ? 1.5 : kind === "spark" ? 1.25 : kind === "streak" ? 1.05 : 0.75;
       p.spin = (Math.random() - 0.5) * (kind === "streak" ? 8 : 3);
     }
     update(cx, cy, baseR, frame2) {
       const { bass, mid, high, bassPulse, midPulse, highPulse, beatPulse, dt } = frame2;
       const rateMul = this.reduced ? 0.22 : 1;
-      this.emitAcc += (2 + mid * 15 + high * 10 + bass * 5) * rateMul * dt;
+      this.emitAcc += (1 + mid * 7 + high * 4 + bass * 2) * rateMul * dt;
       while (this.emitAcc >= 1) {
         this.emitAcc -= 1;
         const roll = Math.random();
-        if (roll < 0.6) {
+        if (roll < 0.65) {
           this.spawn(
             cx,
             cy,
             baseR * 1.15,
             "dust",
-            20 + mid * 40,
-            0.8 + Math.random(),
-            0.8 + Math.random() * 1.1
+            35 + mid * 55,
+            0.7 + Math.random() * 0.8,
+            0.5 + Math.random() * 0.45
           );
         } else {
           this.spawn(
@@ -838,13 +876,13 @@ body {
             cy,
             baseR * 1.1,
             "ember",
-            20 + bass * 40,
-            1.5 + Math.random() * 2,
-            1 + Math.random() * 0.9
+            30 + bass * 50,
+            1.2 + Math.random() * 1.6,
+            0.55 + Math.random() * 0.5
           );
         }
       }
-      this.sparkAcc += (high * 15 + highPulse * 80) * rateMul * dt;
+      this.sparkAcc += (high * 12 + highPulse * 70) * rateMul * dt;
       while (this.sparkAcc >= 1) {
         this.sparkAcc -= 1;
         const isStreak = Math.random() < 0.3;
@@ -853,9 +891,9 @@ body {
           cy,
           baseR * (1.2 + Math.random() * 0.5),
           isStreak ? "streak" : "spark",
-          90 + high * 200,
-          0.8 + Math.random() * 1.4,
-          0.3 + Math.random() * 0.4,
+          110 + high * 220,
+          0.7 + Math.random() * 1.2,
+          0.25 + Math.random() * 0.3,
           isStreak ? Math.PI * 2 : Math.PI * 0.35,
           Math.random() * Math.PI * 2
         );
@@ -871,34 +909,59 @@ body {
         const ty = dx / dist;
         const nx = dx / dist;
         const ny = dy / dist;
-        const swirl = (p.kind === "dust" ? 22 : p.kind === "ember" ? 14 : 30) + mid * 50 + bass * 12 + bassPulse * 28;
-        const outward = (8 + high * 20 + beatPulse * 30) * (p.kind === "streak" ? 1.4 : 1);
-        p.vx += tx * swirl * dt + nx * outward * dt + (Math.random() - 0.5) * high * 40 * dt;
-        p.vy += ty * swirl * dt + ny * outward * dt + (Math.random() - 0.5) * high * 40 * dt;
-        const curl = Math.sin(dist * 0.02 + frame2.time * 2 + p.hue * 6) * (12 + mid * 20);
+        const swirl = (p.kind === "dust" ? 18 : p.kind === "ember" ? 12 : 28) + mid * 40 + bass * 10 + bassPulse * 22;
+        const outward = (10 + high * 22 + beatPulse * 28) * (p.kind === "streak" ? 1.4 : 1);
+        p.vx += tx * swirl * dt + nx * outward * dt + (Math.random() - 0.5) * high * 35 * dt;
+        p.vy += ty * swirl * dt + ny * outward * dt + (Math.random() - 0.5) * high * 35 * dt;
+        const curl = Math.sin(dist * 0.02 + frame2.time * 2 + p.hue * 6) * (10 + mid * 16);
         p.vx += -ny * curl * dt * 0.15;
         p.vy += nx * curl * dt * 0.15;
-        const drag = p.kind === "streak" ? 0.985 : p.kind === "spark" ? 0.988 : 0.993 - midPulse * 2e-3 - highPulse * 1e-3;
+        const drag = p.kind === "streak" ? 0.984 : p.kind === "spark" ? 0.986 : 0.991 - midPulse * 2e-3 - highPulse * 1e-3;
         p.vx *= drag;
         p.vy *= drag;
         p.x += p.vx * dt;
         p.y += p.vy * dt;
         p.life -= dt;
-        p.size *= p.kind === "ember" ? 0.997 : 0.9985;
+        p.size *= p.kind === "ember" ? 0.996 : 0.998;
         if (p.life <= 0 || dist > baseR * 7.5) p.alive = false;
       }
     }
-    burst(cx, cy, baseR, kind) {
-      const count = this.reduced ? kind === "bass" ? 28 : 14 : kind === "bass" ? 90 : kind === "mid" ? 60 : 48;
+    burst(cx, cy, baseR, kind, intensity = 1) {
+      const scale = clamp(intensity, 0.25, 1.2);
+      const count = this.reduced ? kind === "bass" ? Math.floor(18 * scale) : 10 : kind === "bass" ? Math.floor(28 + 55 * scale) : kind === "mid" ? Math.floor(22 * scale) : Math.floor(16 * scale);
       for (let i = 0; i < count; i++) {
         if (kind === "bass") {
           const roll = Math.random();
           if (roll < 0.45) {
-            this.spawn(cx, cy, baseR * 1, "ember", 100 + Math.random() * 160, 2.5 + Math.random() * 3.5, 1 + Math.random() * 0.7);
+            this.spawn(
+              cx,
+              cy,
+              baseR,
+              "ember",
+              120 + Math.random() * 180,
+              2 + Math.random() * 3,
+              0.45 + Math.random() * 0.4
+            );
           } else if (roll < 0.8) {
-            this.spawn(cx, cy, baseR * 1.1, "dust", 80 + Math.random() * 140, 1.5 + Math.random() * 2, 0.9 + Math.random() * 0.6);
+            this.spawn(
+              cx,
+              cy,
+              baseR * 1.1,
+              "dust",
+              100 + Math.random() * 150,
+              1.2 + Math.random() * 1.6,
+              0.4 + Math.random() * 0.4
+            );
           } else {
-            this.spawn(cx, cy, baseR * 1.15, "streak", 160 + Math.random() * 180, 2 + Math.random() * 2, 0.45 + Math.random() * 0.35);
+            this.spawn(
+              cx,
+              cy,
+              baseR * 1.15,
+              "streak",
+              180 + Math.random() * 200,
+              1.6 + Math.random() * 1.6,
+              0.3 + Math.random() * 0.25
+            );
           }
         } else if (kind === "mid") {
           this.spawn(
@@ -906,9 +969,9 @@ body {
             cy,
             baseR * 1.2,
             Math.random() < 0.5 ? "spark" : "dust",
-            110 + Math.random() * 150,
-            1.4 + Math.random() * 2,
-            0.55 + Math.random() * 0.5
+            120 + Math.random() * 140,
+            1.1 + Math.random() * 1.5,
+            0.35 + Math.random() * 0.35
           );
         } else {
           this.spawn(
@@ -916,9 +979,9 @@ body {
             cy,
             baseR * 1.3,
             Math.random() < 0.6 ? "spark" : "streak",
-            150 + Math.random() * 220,
-            0.9 + Math.random() * 1.4,
-            0.3 + Math.random() * 0.4
+            160 + Math.random() * 220,
+            0.8 + Math.random() * 1.2,
+            0.22 + Math.random() * 0.28
           );
         }
       }
@@ -929,46 +992,49 @@ body {
       for (const p of this.pool) {
         if (!p.alive) continue;
         const t = clamp(p.life / p.maxLife, 0, 1);
-        const alpha = clamp(t * (p.kind === "dust" ? 0.7 : 0.95), 0, 0.95);
+        const alpha = clamp(t * (p.kind === "dust" ? 0.55 : 0.85), 0, 0.85);
         const warm = p.hue < 0.62;
-        let r, g, b;
+        let r;
+        let g;
+        let b;
         if (p.kind === "spark" || p.kind === "streak") {
-          r = 200 + p.hue * 55;
-          g = 230 + p.hue * 25;
-          b = 255;
+          r = 220 + p.hue * 35;
+          g = 210 + p.hue * 30;
+          b = 60 + p.hue * 40;
         } else {
-          r = 255;
-          g = warm ? 150 + p.hue * 70 : 210;
-          b = warm ? 70 + p.hue * 40 : 170;
+          r = warm ? 40 + p.hue * 50 : 90;
+          g = warm ? 180 + p.hue * 50 : 230;
+          b = warm ? 70 + p.hue * 40 : 120;
         }
         if (p.kind === "streak" || p.kind === "spark") {
-          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.55})`;
-          ctx.lineWidth = Math.max(0.6, p.size * 0.45 * t);
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.5})`;
+          ctx.lineWidth = Math.max(0.5, p.size * 0.4 * t);
           ctx.lineCap = "round";
           ctx.beginPath();
           ctx.moveTo(p.px, p.py);
           ctx.lineTo(p.x, p.y);
           ctx.stroke();
         }
-        const radius = p.size * (0.55 + t * 0.9) * (p.kind === "ember" ? 1.25 : 1);
+        const radius = p.size * (0.55 + t * 0.85) * (p.kind === "ember" ? 1.2 : 1);
         if (p.glow > 1 || p.kind === "ember") {
-          const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 3.2);
-          grd.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha * 0.45 * p.glow})`);
-          grd.addColorStop(0.4, `rgba(${r}, ${Math.floor(g * 0.7)}, 40, ${alpha * 0.18})`);
+          const glowA = clamp(alpha * 0.35 * p.glow, 0, 0.55);
+          const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 2.8);
+          grd.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${glowA})`);
+          grd.addColorStop(0.4, `rgba(${Math.floor(r * 0.5)}, ${g}, ${Math.floor(b * 0.4)}, ${glowA * 0.35})`);
           grd.addColorStop(1, "rgba(0,0,0,0)");
           ctx.fillStyle = grd;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, radius * 3.2, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, radius * 2.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = `rgba(${r}, ${Math.min(255, g + 30)}, ${Math.min(220, b + 40)}, ${alpha})`;
+        ctx.fillStyle = `rgba(${r}, ${Math.min(255, g + 20)}, ${Math.min(220, b + 30)}, ${alpha})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
         ctx.fill();
         if (p.kind !== "dust") {
-          ctx.fillStyle = p.kind === "spark" || p.kind === "streak" ? `rgba(255, 255, 255, ${alpha * 0.95})` : `rgba(255, 245, 220, ${alpha * 0.85})`;
+          ctx.fillStyle = p.kind === "spark" || p.kind === "streak" ? `rgba(255, 245, 180, ${alpha * 0.8})` : `rgba(200, 255, 210, ${alpha * 0.75})`;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, Math.max(0.4, radius * 0.35), 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, Math.max(0.35, radius * 0.32), 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -981,6 +1047,7 @@ body {
     constructor(capacity = 24) {
       __publicField(this, "waves", []);
       __publicField(this, "reduced", false);
+      __publicField(this, "waveBoost", 0);
       for (let i = 0; i < capacity; i++) {
         this.waves.push({
           alive: false,
@@ -989,33 +1056,46 @@ body {
           width: 2,
           alpha: 0,
           speed: 0,
-          kind: "bass"
+          kind: "bass",
+          crossedWave: false
         });
       }
     }
     setReducedMotion(value) {
       this.reduced = value;
     }
+    getWaveBoost() {
+      return this.waveBoost;
+    }
+    /** Only bass gets fullscreen shockwaves (P1 §2.1) */
     spawn(kind, baseR) {
-      if (this.reduced && kind === "high") return;
+      if (kind !== "bass") return;
+      if (this.reduced) return;
       const w = this.waves.find((q) => !q.alive);
       if (!w) return;
       w.alive = true;
-      w.kind = kind;
-      w.radius = baseR * (kind === "bass" ? 0.9 : kind === "mid" ? 1.1 : 1.2);
-      w.maxRadius = baseR * (kind === "bass" ? 4.5 : kind === "mid" ? 3.5 : 2.5);
-      w.width = kind === "bass" ? 12 : kind === "mid" ? 6 : 3;
-      w.alpha = kind === "bass" ? 0.85 : kind === "mid" ? 0.6 : 0.45;
-      w.speed = baseR * (kind === "bass" ? 4 : kind === "mid" ? 4.5 : 5);
+      w.kind = "bass";
+      w.radius = baseR * 0.9;
+      w.maxRadius = baseR * 4.5;
+      w.width = 12;
+      w.alpha = 0.85;
+      w.speed = baseR * 5.5;
+      w.crossedWave = false;
     }
-    update(dt) {
+    update(dt, waveBase) {
+      this.waveBoost = Math.max(0, this.waveBoost - dt * 4.5);
       for (const w of this.waves) {
         if (!w.alive) continue;
         w.radius += w.speed * dt;
+        w.speed *= Math.exp(-dt * 1.8);
         const progress = w.radius / w.maxRadius;
-        w.alpha *= Math.exp(-dt * (2.5 + progress * 3));
+        w.alpha *= Math.exp(-dt * (2.2 + progress * 2.5));
         w.width *= 0.985;
-        if (w.radius >= w.maxRadius || w.alpha < 0.02) w.alive = false;
+        if (!w.crossedWave && Math.abs(w.radius - waveBase) < 22) {
+          w.crossedWave = true;
+          this.waveBoost = Math.min(1, this.waveBoost + 0.55);
+        }
+        if (w.radius >= w.maxRadius || w.alpha < 0.02 || w.speed < 4) w.alive = false;
       }
     }
     draw(ctx, cx, cy, _frame) {
@@ -1023,32 +1103,20 @@ body {
       ctx.globalCompositeOperation = "lighter";
       for (const w of this.waves) {
         if (!w.alive) continue;
-        const a = clamp(w.alpha, 0, 1);
-        if (w.kind === "bass") {
-          ctx.strokeStyle = `rgba(255, 170, 70, ${a})`;
-          ctx.shadowColor = "rgba(255, 140, 40, 0.8)";
-          ctx.shadowBlur = 24;
-        } else if (w.kind === "mid") {
-          ctx.strokeStyle = `rgba(255, 220, 160, ${a})`;
-          ctx.shadowColor = "rgba(255, 200, 120, 0.7)";
-          ctx.shadowBlur = 14;
-        } else {
-          ctx.strokeStyle = `rgba(255, 240, 210, ${a * 0.85})`;
-          ctx.shadowColor = "rgba(255, 230, 180, 0.5)";
-          ctx.shadowBlur = 8;
-        }
+        const a = clamp(w.alpha, 0, 0.85);
+        ctx.strokeStyle = `rgba(62, 207, 122, ${a})`;
+        ctx.shadowColor = "rgba(46, 180, 90, 0.7)";
+        ctx.shadowBlur = 20;
         ctx.lineWidth = w.width;
         ctx.beginPath();
         ctx.arc(cx, cy, w.radius, 0, Math.PI * 2);
         ctx.stroke();
-        if (w.kind === "bass") {
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = `rgba(255, 236, 200, ${a * 0.35})`;
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(cx, cy, w.radius * 0.92, 0, Math.PI * 2);
-          ctx.stroke();
-        }
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = `rgba(232, 212, 74, ${a * 0.35})`;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, w.radius * 0.92, 0, Math.PI * 2);
+        ctx.stroke();
       }
       ctx.restore();
     }
@@ -1059,14 +1127,18 @@ body {
     constructor(canvas2) {
       this.canvas = canvas2;
       __publicField(this, "ctx");
-      __publicField(this, "particles", new ParticleSystem(2800));
-      __publicField(this, "shocks", new ShockwaveSystem(28));
+      __publicField(this, "particles", new ParticleSystem(2200));
+      __publicField(this, "shocks", new ShockwaveSystem(16));
       __publicField(this, "stars", []);
+      __publicField(this, "pending", []);
+      __publicField(this, "noiseCanvas", null);
+      __publicField(this, "noiseCtx", null);
       __publicField(this, "w", 0);
       __publicField(this, "h", 0);
       __publicField(this, "dpr", 1);
       __publicField(this, "smooth", { bass: 0, lowMid: 0, mid: 0, high: 0, overall: 0, rms: 0 });
       __publicField(this, "env", { brightness: 0, deform: 0, bg: 0 });
+      __publicField(this, "midRipple", 0);
       __publicField(this, "reduced", false);
       __publicField(this, "smoothness", 0.7);
       const ctx = canvas2.getContext("2d", { alpha: true });
@@ -1075,12 +1147,13 @@ body {
       this.reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
       this.particles.setReducedMotion(this.reduced);
       this.shocks.setReducedMotion(this.reduced);
-      for (let i = 0; i < (this.reduced ? 40 : 120); i++) {
+      const n = this.reduced ? 50 : 160;
+      for (let i = 0; i < n; i++) {
         this.stars.push({
           x: Math.random(),
           y: Math.random(),
           z: Math.random(),
-          s: 0.4 + Math.random() * 1.4
+          s: 0.35 + Math.random() * 2.2
         });
       }
     }
@@ -1093,24 +1166,61 @@ body {
       this.canvas.style.width = `${this.w}px`;
       this.canvas.style.height = `${this.h}px`;
       this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      this.ensureNoise(128);
     }
     setSmoothness(value) {
       this.smoothness = value;
+    }
+    ensureNoise(size) {
+      if (this.noiseCanvas) return;
+      this.noiseCanvas = document.createElement("canvas");
+      this.noiseCanvas.width = size;
+      this.noiseCanvas.height = size;
+      this.noiseCtx = this.noiseCanvas.getContext("2d");
+      if (!this.noiseCtx) return;
+      const img = this.noiseCtx.createImageData(size, size);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const v = Math.random() * 255 | 0;
+        img.data[i] = v;
+        img.data[i + 1] = v;
+        img.data[i + 2] = v;
+        img.data[i + 3] = 255;
+      }
+      this.noiseCtx.putImageData(img, 0, 0);
     }
     render(audio, onset2, time, dt, playing) {
       const ctx = this.ctx;
       const cx = this.w * 0.5;
       const cy = this.h * 0.46;
       const baseR = Math.min(this.w, this.h) * 0.16;
+      const nowMs = time * 1e3;
       if (audio) {
         const attackBase = lerp(10, 60, this.smoothness);
         const releaseBase = lerp(100, 400, this.smoothness);
         this.smooth.bass = attackRelease(this.smooth.bass, audio.bass, attackBase, releaseBase, dt);
-        this.smooth.lowMid = attackRelease(this.smooth.lowMid, audio.lowMid, attackBase, releaseBase, dt);
+        this.smooth.lowMid = attackRelease(
+          this.smooth.lowMid,
+          audio.lowMid,
+          attackBase,
+          releaseBase,
+          dt
+        );
         this.smooth.mid = attackRelease(this.smooth.mid, audio.mid, attackBase, releaseBase, dt);
         this.smooth.high = attackRelease(this.smooth.high, audio.high, attackBase, releaseBase, dt);
-        this.smooth.overall = attackRelease(this.smooth.overall, audio.overall, attackBase * 2, releaseBase * 2, dt);
-        this.smooth.rms = attackRelease(this.smooth.rms, audio.rms, attackBase * 2, releaseBase * 2, dt);
+        this.smooth.overall = attackRelease(
+          this.smooth.overall,
+          audio.overall,
+          attackBase * 2,
+          releaseBase * 2,
+          dt
+        );
+        this.smooth.rms = attackRelease(
+          this.smooth.rms,
+          audio.rms,
+          attackBase * 2,
+          releaseBase * 2,
+          dt
+        );
         this.env.brightness = attackRelease(this.env.brightness, audio.rms, 30, 200, dt);
         this.env.deform = attackRelease(this.env.deform, audio.bass, 60, 400, dt);
         this.env.bg = attackRelease(this.env.bg, audio.overall, 200, 1e3, dt);
@@ -1126,6 +1236,29 @@ body {
         this.env.deform = lerp(this.env.deform, breath, 0.05);
         this.env.bg = lerp(this.env.bg, breath, 0.05);
       }
+      if (onset2?.bass) {
+        this.shocks.spawn("bass", baseR);
+        this.pending.push({
+          kind: "bass",
+          at: nowMs + 40,
+          intensity: 0.35 + (onset2.bassPulse || 0.7) * 0.85
+        });
+      }
+      if (onset2?.mid) {
+        this.midRipple = Math.min(1, this.midRipple + 0.7);
+        this.pending.push({ kind: "mid", at: nowMs + 50, intensity: 0.55 });
+      }
+      if (onset2?.high) {
+        this.pending.push({ kind: "high", at: nowMs + 30, intensity: 0.7 });
+      }
+      this.midRipple = Math.max(0, this.midRipple - dt * 3.2);
+      for (let i = this.pending.length - 1; i >= 0; i--) {
+        const p = this.pending[i];
+        if (nowMs >= p.at) {
+          this.particles.burst(cx, cy, baseR, p.kind, p.intensity);
+          this.pending.splice(i, 1);
+        }
+      }
       const frame2 = {
         bass: this.smooth.bass,
         lowMid: this.smooth.lowMid,
@@ -1138,45 +1271,80 @@ body {
         midPulse: onset2?.midPulse ?? 0,
         highPulse: onset2?.highPulse ?? 0,
         beatPulse: onset2?.beatPulse ?? 0,
+        waveBoost: this.shocks.getWaveBoost(),
+        midRipple: this.midRipple,
         frequency: audio?.frequency ?? idleSpectrum(time),
         waveform: audio?.waveform ?? idleWave(time),
         time,
         dt
       };
       ctx.globalCompositeOperation = "source-over";
-      const trailAlpha = playing ? lerp(0.28, 0.45, this.env.bg) : 0.45;
-      ctx.fillStyle = `rgba(5, 4, 3, ${trailAlpha})`;
+      const beatHold = frame2.beatPulse > 0.35 ? 0.18 : lerp(0.28, 0.42, this.env.bg);
+      const trailAlpha = playing ? beatHold : 0.45;
+      ctx.fillStyle = `rgba(3, 8, 5, ${trailAlpha})`;
       ctx.fillRect(0, 0, this.w, this.h);
       this.drawStars(ctx, frame2);
-      if (onset2?.bass) this.shocks.spawn("bass", baseR);
-      if (onset2?.mid) this.shocks.spawn("mid", baseR);
-      if (onset2?.high) this.shocks.spawn("high", baseR);
-      if (onset2?.bass) this.particles.burst(cx, cy, baseR, "bass");
-      if (onset2?.mid) this.particles.burst(cx, cy, baseR, "mid");
-      if (onset2?.high) this.particles.burst(cx, cy, baseR, "high");
-      this.shocks.update(dt);
+      this.drawFarOrbits(ctx, cx, cy, baseR, frame2);
+      const waveBase = baseR * (1.9 + frame2.bass * 0.08 + frame2.beatPulse * 0.03);
+      this.shocks.update(dt, waveBase);
       this.particles.update(cx, cy, baseR, frame2);
       this.shocks.draw(ctx, cx, cy, frame2);
       drawCircularWaveform(ctx, cx, cy, baseR, frame2);
       drawCoreAndRings(ctx, cx, cy, baseR, frame2);
       this.particles.draw(ctx);
-      const vig = ctx.createRadialGradient(cx, cy, baseR * 0.5, cx, cy, Math.max(this.w, this.h) * 0.72);
-      vig.addColorStop(0, "rgba(0,0,0,0)");
-      vig.addColorStop(1, "rgba(0,0,0,0.55)");
-      ctx.fillStyle = vig;
-      ctx.fillRect(0, 0, this.w, this.h);
+      this.drawGrain(ctx);
+      this.drawVignette(ctx, cx, cy, baseR);
     }
     drawStars(ctx, frame2) {
-      const drift = frame2.time * 0.01;
+      const drift = frame2.time * 0.03;
       for (const star of this.stars) {
-        const x = (star.x + drift * (0.02 + star.z * 0.04)) % 1 * this.w;
-        const y = star.y * this.h;
-        const a = 0.15 + star.z * 0.35 + frame2.high * 0.2;
-        ctx.fillStyle = `rgba(243, 230, 208, ${a})`;
+        const x = (star.x + drift * (0.04 + star.z * 0.1)) % 1 * this.w;
+        const y = (star.y + drift * star.z * 0.015) % 1 * this.h;
+        const a = clamp(0.22 + star.z * 0.45 + frame2.high * 0.15, 0, 0.75);
+        ctx.fillStyle = `rgba(200, 245, 210, ${a})`;
         ctx.beginPath();
-        ctx.arc(x, y, star.s * (0.6 + frame2.high * 0.5), 0, Math.PI * 2);
+        ctx.arc(x, y, star.s * (0.55 + star.z * 0.7), 0, Math.PI * 2);
         ctx.fill();
       }
+    }
+    drawFarOrbits(ctx, cx, cy, baseR, frame2) {
+      ctx.save();
+      ctx.strokeStyle = `rgba(62, 207, 122, ${0.035 + frame2.overall * 0.02})`;
+      ctx.lineWidth = 0.7;
+      for (let i = 0; i < 2; i++) {
+        const r = baseR * (3.2 + i * 0.55) * (1 + Math.sin(frame2.time * 0.3 + i) * 0.01);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    drawGrain(ctx) {
+      if (!this.noiseCanvas) return;
+      ctx.save();
+      ctx.globalAlpha = 0.028;
+      ctx.globalCompositeOperation = "overlay";
+      const tile = 128;
+      for (let y = 0; y < this.h; y += tile) {
+        for (let x = 0; x < this.w; x += tile) {
+          ctx.drawImage(this.noiseCanvas, x, y, tile, tile);
+        }
+      }
+      ctx.restore();
+    }
+    drawVignette(ctx, cx, cy, baseR) {
+      const vig = ctx.createRadialGradient(
+        cx,
+        cy,
+        baseR * 0.5,
+        cx,
+        cy,
+        Math.max(this.w, this.h) * 0.72
+      );
+      vig.addColorStop(0, "rgba(0,0,0,0)");
+      vig.addColorStop(1, "rgba(0,0,0,0.5)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, this.w, this.h);
     }
   };
   var idleFreq = new Uint8Array(1024);
@@ -1325,10 +1493,14 @@ body {
     e.preventDefault();
     e.stopPropagation();
   }
-  ["dragenter", "dragover", "dragleave", "drop"].forEach((evt) => {
-    document.addEventListener(evt, onDrag);
-    window.addEventListener(evt, onDrag);
-  });
+  document.addEventListener("dragenter", onDrag);
+  document.addEventListener("dragover", onDrag);
+  document.addEventListener("dragleave", onDrag);
+  document.addEventListener("drop", onDrag);
+  window.addEventListener("dragenter", onDrag);
+  window.addEventListener("dragover", onDrag);
+  window.addEventListener("dragleave", onDrag);
+  window.addEventListener("drop", onDrag);
   document.addEventListener("drop", (e) => {
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;

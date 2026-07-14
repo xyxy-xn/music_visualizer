@@ -140,15 +140,19 @@ engine.audio.addEventListener("loadedmetadata", () => {
   timeTotal.textContent = formatTime(engine.duration);
 });
 
-function onDrag(e: DragEvent): void {
+function onDrag(e: Event): void {
   e.preventDefault();
   e.stopPropagation();
 }
 
-["dragenter", "dragover", "dragleave", "drop"].forEach((evt) => {
-  document.addEventListener(evt, onDrag);
-  window.addEventListener(evt, onDrag);
-});
+document.addEventListener("dragenter", onDrag);
+document.addEventListener("dragover", onDrag);
+document.addEventListener("dragleave", onDrag);
+document.addEventListener("drop", onDrag);
+window.addEventListener("dragenter", onDrag);
+window.addEventListener("dragover", onDrag);
+window.addEventListener("dragleave", onDrag);
+window.addEventListener("drop", onDrag);
 
 document.addEventListener("drop", (e) => {
   const file = e.dataTransfer?.files?.[0];

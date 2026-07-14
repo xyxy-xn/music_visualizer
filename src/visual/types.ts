@@ -10,6 +10,10 @@ export type VisualFrame = {
   midPulse: number;
   highPulse: number;
   beatPulse: number;
+  /** Shockwave crossing the spectrum ring */
+  waveBoost: number;
+  /** Mid onset local ripple on the ring */
+  midRipple: number;
   frequency: Uint8Array;
   waveform: Uint8Array;
   time: number;
