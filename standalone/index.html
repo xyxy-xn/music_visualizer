@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PULSE — Music Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+:root {
+  --bg-0: #050403;
+  --bg-1: #0c0a08;
+  --gold: #e8b86a;
+  --gold-bright: #ffd89a;
+  --gold-dim: #8a6a3a;
+  --amber: #c8792e;
+  --cream: #f3e6d0;
+  --ink: #1a1510;
+  --glass: rgba(232, 184, 106, 0.08);
+  --line: rgba(232, 184, 106, 0.22);
+  --dock-bg: rgba(8, 6, 4, 0.72);
+  --font-display: "Syne", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg-0);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  overflow: hidden;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 45%, #1a1208 0%, transparent 55%),
+    radial-gradient(ellipse 100% 100% at 50% 100%, #120c06 0%, var(--bg-0) 55%);
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.drop-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.drop-hint.is-hidden {
+  opacity: 0;
+}
+
+.drop-hint__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  color: var(--cream);
+  letter-spacing: 0.04em;
+}
+
+.drop-hint__meta {
+  margin: 0.6rem 0 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  color: var(--gold-dim);
+}
+
+.dock {
+  position: absolute;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: min(920px, calc(100% - 2rem));
+  padding: 0.85rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--dock-bg);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.dock.is-hidden {
+  opacity: 0;
+  transform: translate(-50%, 1rem);
+  pointer-events: none;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(232, 184, 106, 0.15);
+  border-color: rgba(232, 184, 106, 0.4);
+  color: #fff;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: rgba(232, 184, 106, 0.25);
+  border-color: rgba(232, 184, 106, 0.6);
+}
+
+.secondary-btn {
+  font-size: 0.7rem;
+  padding: 0.45rem 0.75rem;
+  background: transparent;
+  border-color: transparent;
+  color: var(--gold-dim);
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gold);
+}
+
+.btn:hover:not(:disabled) {
+  background: rgba(232, 184, 106, 0.18);
+  border-color: rgba(232, 184, 106, 0.45);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.track {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+}
+
+.track__name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--gold-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seek {
+  width: 100%;
+  accent-color: var(--gold);
+  height: 0.45rem;
+  cursor: pointer;
+}
+
+.track__time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--gold-dim);
+}
+
+.controls-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.sens {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  min-width: 5rem;
+}
+
+.sens input {
+  width: 100%;
+  accent-color: var(--amber);
+}
+
+@media (max-width: 720px) {
+  .dock {
+    flex-wrap: wrap;
+    border-radius: 1.25rem;
+    justify-content: center;
+  }
+
+  .sens {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop-hint {
+    transition: none;
+  }
+}
+
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="stage" aria-label="音乐可视化舞台"></canvas>
+
+      <div class="drop-hint" id="dropHint">
+        <p class="drop-hint__title">拖入或选择一首音乐</p>
+        <p class="drop-hint__meta">WAV · MP3 · OGG · FLAC · M4A</p>
+      </div>
+
+      <footer class="dock" id="dock">
+        <button type="button" class="btn icon-btn" id="playBtn" disabled aria-label="播放/暂停">
+          <svg id="icon-play" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <svg id="icon-pause" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+        </button>
+        <label class="btn file-btn secondary-btn">
+          上传
+          <input id="fileInput" type="file" accept="audio/*,.mp3,.wav,.ogg,.flac,.m4a,.aac" hidden />
+        </label>
+        <div class="track">
+          <span class="track__name" id="trackName">未选择音频</span>
+          <input id="seek" class="seek" type="range" min="0" max="1000" value="0" disabled />
+          <div class="track__time">
+            <span id="timeCurrent">0:00</span>
+            <span id="timeTotal">0:00</span>
+          </div>
+        </div>
+        <div class="controls-group">
+          <label class="sens">
+            <span>强度</span>
+            <input id="sensitivity" type="range" min="0.5" max="2" step="0.05" value="1" />
+          </label>
+          <label class="sens">
+            <span>平滑</span>
+            <input id="smoothness" type="range" min="0.1" max="0.9" step="0.05" value="0.7" />
+          </label>
+        </div>
+      </footer>
+    </div>
+    <script>
+"use strict";
+(() => {
+  var __defProp = Object.defineProperty;
+  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+  var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+
+  // src/audio/analyser.ts
+  var FFT_SIZE = 2048;
+  function hzToBin(hz, sampleRate, binCount) {
+    return Math.min(binCount - 1, Math.max(0, Math.round(hz * binCount * 2 / sampleRate)));
+  }
+  function bandEnergy(data, sampleRate, lowHz, highHz) {
+    const bins = data.length;
+    const start = hzToBin(lowHz, sampleRate, bins);
+    const end = Math.max(start + 1, hzToBin(highHz, sampleRate, bins));
+    let sum = 0;
+    for (let i = start; i < end; i++) sum += data[i];
+    return sum / ((end - start) * 255);
+  }
+  var SpectrumAnalyser = class {
+    constructor(ctx) {
+      __publicField(this, "analyser");
+      __publicField(this, "freq");
+      __publicField(this, "wave");
+      this.analyser = ctx.createAnalyser();
+      this.analyser.fftSize = FFT_SIZE;
+      this.analyser.smoothingTimeConstant = 0.72;
+      this.analyser.minDecibels = -90;
+      this.analyser.maxDecibels = -20;
+      this.freq = new Uint8Array(this.analyser.frequencyBinCount);
+      this.wave = new Uint8Array(this.analyser.fftSize);
+    }
+    connect(source) {
+      source.connect(this.analyser);
+    }
+    sample() {
+      this.analyser.getByteFrequencyData(this.freq);
+      this.analyser.getByteTimeDomainData(this.wave);
+      const sampleRate = this.analyser.context.sampleRate;
+      const bass = bandEnergy(this.freq, sampleRate, 20, 100);
+      const lowMid = bandEnergy(this.freq, sampleRate, 100, 500);
+      const mid = bandEnergy(this.freq, sampleRate, 500, 2e3);
+      const high = bandEnergy(this.freq, sampleRate, 2e3, 12e3);
+      const overall = bass * 0.35 + lowMid * 0.3 + mid * 0.2 + high * 0.15;
+      let sumSq = 0;
+      for (let i = 0; i < this.wave.length; i++) {
+        const v = (this.wave[i] - 128) / 128;
+        sumSq += v * v;
+      }
+      const rms = Math.sqrt(sumSq / this.wave.length);
+      return {
+        bass,
+        lowMid,
+        mid,
+        high,
+        overall,
+        rms,
+        frequency: this.freq,
+        waveform: this.wave,
+        sampleRate
+      };
+    }
+  };
+
+  // src/audio/engine.ts
+  var AudioEngine = class {
+    constructor() {
+      __publicField(this, "audio", new Audio());
+      __publicField(this, "ctx", null);
+      __publicField(this, "source", null);
+      __publicField(this, "analyser", null);
+      __publicField(this, "objectUrl", null);
+      __publicField(this, "wired", false);
+      this.audio.preload = "auto";
+    }
+    async ensureContext() {
+      if (!this.ctx) {
+        this.ctx = new AudioContext();
+        this.analyser = new SpectrumAnalyser(this.ctx);
+      }
+      if (this.ctx.state === "suspended") {
+        await this.ctx.resume();
+      }
+      return this.ctx;
+    }
+    wireGraph() {
+      if (!this.ctx || !this.analyser || this.wired) return;
+      this.source = this.ctx.createMediaElementSource(this.audio);
+      this.analyser.connect(this.source);
+      this.source.connect(this.ctx.destination);
+      this.wired = true;
+    }
+    async loadFile(file) {
+      await this.ensureContext();
+      this.wireGraph();
+      if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
+      this.objectUrl = URL.createObjectURL(file);
+      this.audio.src = this.objectUrl;
+      await new Promise((resolve, reject) => {
+        const onReady = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = () => {
+          cleanup();
+          reject(new Error("\u65E0\u6CD5\u52A0\u8F7D\u97F3\u9891\u6587\u4EF6"));
+        };
+        const cleanup = () => {
+          this.audio.removeEventListener("canplay", onReady);
+          this.audio.removeEventListener("error", onError);
+        };
+        this.audio.addEventListener("canplay", onReady);
+        this.audio.addEventListener("error", onError);
+        this.audio.load();
+      });
+    }
+    async play() {
+      await this.ensureContext();
+      this.wireGraph();
+      await this.audio.play();
+    }
+    pause() {
+      this.audio.pause();
+    }
+    get playing() {
+      return !this.audio.paused && !this.audio.ended;
+    }
+    get currentTime() {
+      return this.audio.currentTime;
+    }
+    get duration() {
+      return Number.isFinite(this.audio.duration) ? this.audio.duration : 0;
+    }
+    seek(time) {
+      if (!Number.isFinite(this.audio.duration)) return;
+      this.audio.currentTime = Math.max(0, Math.min(this.audio.duration, time));
+    }
+    sample() {
+      if (!this.analyser) return null;
+      return this.analyser.sample();
+    }
+    dispose() {
+      this.pause();
+      if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
+      void this.ctx?.close();
+    }
+  };
+
+  // src/audio/onset.ts
+  var COOLDOWN_MS = {
+    bass: 120,
+    lowMid: 100,
+    mid: 80,
+    high: 50
+  };
+  var DECAY = {
+    bass: 3.2,
+    lowMid: 3.8,
+    mid: 4.2,
+    high: 5.5
+  };
+  function createTracker() {
+    return { prev: 0, mean: 0.02, variance: 4e-4, lastOnset: -1e9, pulse: 0 };
+  }
+  var OnsetDetector = class {
+    constructor() {
+      __publicField(this, "sensitivity", 1);
+      __publicField(this, "bands", {
+        bass: createTracker(),
+        lowMid: createTracker(),
+        mid: createTracker(),
+        high: createTracker()
+      });
+      __publicField(this, "beatPulse", 0);
+    }
+    setSensitivity(value) {
+      this.sensitivity = Math.max(0.5, Math.min(2, value));
+    }
+    update(energies, nowMs, dt) {
+      const bass = this.step("bass", energies.bass, nowMs, dt);
+      const lowMid = this.step("lowMid", energies.lowMid, nowMs, dt);
+      const mid = this.step("mid", energies.mid, nowMs, dt);
+      const high = this.step("high", energies.high, nowMs, dt);
+      if (bass.fired || lowMid.fired || mid.fired) {
+        this.beatPulse = Math.min(1, this.beatPulse + (bass.fired ? 0.85 : 0.45));
+      }
+      this.beatPulse = Math.max(0, this.beatPulse - dt * 3.4);
+      return {
+        bass: bass.fired,
+        lowMid: lowMid.fired,
+        mid: mid.fired,
+        high: high.fired,
+        bassPulse: this.bands.bass.pulse,
+        lowMidPulse: this.bands.lowMid.pulse,
+        midPulse: this.bands.mid.pulse,
+        highPulse: this.bands.high.pulse,
+        beatPulse: this.beatPulse
+      };
+    }
+    step(name, energy, nowMs, dt) {
+      const t = this.bands[name];
+      const flux = Math.max(0, energy - t.prev);
+      t.prev = energy;
+      const alpha = 0.08;
+      const delta = flux - t.mean;
+      t.mean += alpha * delta;
+      t.variance = Math.max(1e-6, (1 - alpha) * (t.variance + alpha * delta * delta));
+      const std = Math.sqrt(t.variance);
+      const k = 2.35 / this.sensitivity;
+      const threshold = t.mean + k * std + 0.012 / this.sensitivity;
+      const cooled = nowMs - t.lastOnset >= COOLDOWN_MS[name];
+      const fired = cooled && flux > threshold && energy > 0.04;
+      if (fired) {
+        t.lastOnset = nowMs;
+        t.pulse = 1;
+      } else {
+        t.pulse = Math.max(0, t.pulse - dt * DECAY[name]);
+      }
+      return { fired };
+    }
+  };
+
+  // src/visual/types.ts
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+  function attackRelease(current, target, attackMs, releaseMs, dt) {
+    const diff = target - current;
+    const timeConst = diff > 0 ? attackMs : releaseMs;
+    if (timeConst <= 0) return target;
+    const alpha = 1 - Math.exp(-(dt * 1e3) / timeConst);
+    return current + diff * alpha;
+  }
+
+  // src/visual/core.ts
+  function drawCoreAndRings(ctx, cx, cy, baseR, frame2) {
+    const { bass, lowMid, mid, high, bassPulse, midPulse, highPulse, beatPulse } = frame2;
+    const coreR = baseR * (0.28 - bass * 0.03 + bassPulse * 0.09 + beatPulse * 0.04);
+    const squash = 1 - beatPulse * 0.08;
+    const stretch = 1 + beatPulse * 0.08;
+    const glowR = coreR * (2.4 + lowMid * 0.5);
+    const glow = ctx.createRadialGradient(cx, cy, coreR * 0.2, cx, cy, glowR);
+    glow.addColorStop(0, `rgba(255, 216, 154, ${clamp(0.25 + bass * 0.2 + bassPulse * 0.15, 0, 0.6)})`);
+    glow.addColorStop(0.35, `rgba(200, 121, 46, ${clamp(0.15 + lowMid * 0.15, 0, 0.4)})`);
+    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    ctx.fillStyle = glow;
+    ctx.save();
+    ctx.translate(cx, cy);
+    const tiltX = Math.sin(frame2.time * 0.7) * mid * 0.1;
+    const tiltY = Math.cos(frame2.time * 0.8) * mid * 0.1;
+    ctx.transform(1, tiltY, tiltX, 1, 0, 0);
+    ctx.beginPath();
+    ctx.scale(stretch, squash);
+    ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, 0, coreR, 0, Math.PI * 2);
+    ctx.clip();
+    const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, coreR);
+    coreGrad.addColorStop(0, "#ffe4b5");
+    coreGrad.addColorStop(0.5, "#d48c36");
+    coreGrad.addColorStop(1, "#5c2b09");
+    ctx.fillStyle = coreGrad;
+    ctx.fill();
+    ctx.globalCompositeOperation = "screen";
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.rotate(frame2.time * (0.2 + i * 0.1) + i * Math.PI / 3);
+      const ox = Math.sin(frame2.time * 0.5 + i) * coreR * 0.3;
+      const oy = Math.cos(frame2.time * 0.4 - i) * coreR * 0.3;
+      const nebGrad = ctx.createRadialGradient(ox, oy, 0, ox, oy, coreR * 1.2);
+      const r = 200 + i * 20;
+      const g = 100 + mid * 100;
+      const b = 50 + high * 150;
+      nebGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${0.3 + bassPulse * 0.2})`);
+      nebGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = nebGrad;
+      ctx.beginPath();
+      ctx.arc(ox, oy, coreR * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = `rgba(255, 236, 200, ${clamp(0.4 + beatPulse * 0.4, 0, 0.8)})`;
+    ctx.lineWidth = 1.5 + bassPulse * 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, coreR * 0.98, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.transform(1, tiltY * 0.5, tiltX * 0.5, 1, 0, 0);
+    const rings = [
+      { mul: 1.35, a: 0.15 + lowMid * 0.2 + midPulse * 0.15, w: 1.2 },
+      { mul: 1.7, a: 0.1 + mid * 0.2 + highPulse * 0.1, w: 1 },
+      { mul: 2.15, a: 0.06 + lowMid * 0.1, w: 0.8 },
+      { mul: 2.65, a: 0.04 + high * 0.1 + beatPulse * 0.06, w: 0.7 }
+    ];
+    for (let i = 0; i < rings.length; i++) {
+      const ring = rings[i];
+      const breathe = 1 + Math.sin(frame2.time * (0.8 + i * 0.15) + i) * 0.01 * (1 + lowMid);
+      const r = baseR * ring.mul * breathe * (1 + lowMid * 0.03 + beatPulse * 0.02);
+      ctx.strokeStyle = `rgba(232, 184, 106, ${clamp(ring.a, 0, 0.6)})`;
+      ctx.lineWidth = ring.w + midPulse * 0.6;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      if (i % 2 === 1) {
+        ctx.save();
+        ctx.setLineDash([6, 10]);
+        ctx.strokeStyle = `rgba(255, 216, 154, ${clamp(0.06 + high * 0.1, 0, 0.3)})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    const tickR = baseR * lerp(1.7, 1.78, mid);
+    const ticks = 48;
+    ctx.save();
+    ctx.rotate(frame2.time * 0.15);
+    for (let i = 0; i < ticks; i++) {
+      const a = i / ticks * Math.PI * 2;
+      const len = 4 + (i % 4 === 0 ? 6 : 0) + high * 6;
+      const x0 = Math.cos(a) * tickR;
+      const y0 = Math.sin(a) * tickR;
+      const x1 = Math.cos(a) * (tickR + len);
+      const y1 = Math.sin(a) * (tickR + len);
+      ctx.strokeStyle = `rgba(232, 184, 106, ${clamp(0.1 + high * 0.2, 0, 0.5)})`;
+      ctx.lineWidth = i % 4 === 0 ? 1.2 : 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+
+  // src/visual/waveform.ts
+  var BINS = 256;
+  var smoothData = new Float32Array(BINS);
+  var trailData = new Float32Array(BINS);
+  function sampleSpectrum(frequency, bins, target, lerpT) {
+    const n = Math.floor(frequency.length * 0.75);
+    for (let i = 0; i < bins; i++) {
+      const t = i / bins;
+      const distFromBottom = Math.abs(t - 0.5) * 2;
+      const freqT = Math.pow(distFromBottom, 1.5);
+      const centerIdx = Math.floor(freqT * (n - 1));
+      let sum = 0;
+      let count = 0;
+      const window2 = Math.max(1, Math.floor(freqT * 4));
+      for (let j = Math.max(0, centerIdx - window2); j <= Math.min(n - 1, centerIdx + window2); j++) {
+        sum += frequency[j];
+        count++;
+      }
+      const raw = sum / count / 255;
+      const mapped = Math.pow(raw, 0.65);
+      target[i] = lerp(target[i], mapped, lerpT);
+    }
+    const temp = new Float32Array(bins);
+    for (let i = 0; i < bins; i++) {
+      const prev2 = target[(i - 2 + bins) % bins];
+      const prev1 = target[(i - 1 + bins) % bins];
+      const cur = target[i];
+      const next1 = target[(i + 1) % bins];
+      const next2 = target[(i + 2) % bins];
+      temp[i] = prev2 * 0.1 + prev1 * 0.2 + cur * 0.4 + next1 * 0.2 + next2 * 0.1;
+    }
+    for (let i = 0; i < bins; i++) {
+      target[i] = temp[i];
+    }
+  }
+  function radiusAt(smoothed, idx, bins, base, amp, detail, time, spin) {
+    const v = smoothed[idx];
+    const a = idx / bins * Math.PI * 2 - Math.PI / 2 + spin;
+    const wobble = Math.sin(a * 3 + time * 1.1) * 0.015 + Math.sin(a * 7 - time * 0.7) * 0.01 + Math.sin(a * 13 + time * 1.6) * 5e-3 * detail;
+    return base + v * amp + base * wobble * (0.5 + detail);
+  }
+  function traceRing(ctx, cx, cy, smoothed, bins, base, amp, detail, time, spin, close) {
+    ctx.beginPath();
+    for (let i = 0; i <= bins; i++) {
+      const idx = i % bins;
+      const a = idx / bins * Math.PI * 2 - Math.PI / 2 + spin;
+      const r = radiusAt(smoothed, idx, bins, base, amp, detail, time, spin);
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    if (close) ctx.closePath();
+  }
+  function drawCircularWaveform(ctx, cx, cy, baseR, frame2) {
+    const { frequency, bass, lowMid, mid, high, beatPulse, time, dt } = frame2;
+    sampleSpectrum(frequency, BINS, smoothData, 0.4);
+    for (let i = 0; i < BINS; i++) {
+      trailData[i] = Math.max(smoothData[i], trailData[i] - dt * 1.5);
+    }
+    const waveBase = baseR * (1.9 + bass * 0.08 + beatPulse * 0.03);
+    const waveAmp = waveBase * (0.35 + lowMid * 0.2 + beatPulse * 0.1);
+    const spin = time * 0.05;
+    traceRing(ctx, cx, cy, smoothData, BINS, waveBase, waveAmp, mid + bass, time, spin, true);
+    const fill = ctx.createRadialGradient(cx, cy, waveBase * 0.6, cx, cy, waveBase + waveAmp);
+    fill.addColorStop(0, "rgba(200, 121, 46, 0.0)");
+    fill.addColorStop(0.6, `rgba(232, 184, 106, ${0.05 + lowMid * 0.08})`);
+    fill.addColorStop(1, `rgba(255, 170, 70, ${0.03 + beatPulse * 0.06})`);
+    ctx.fillStyle = fill;
+    ctx.fill();
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    traceRing(ctx, cx, cy, trailData, BINS, waveBase * 1.02, waveAmp * 1.05, mid, time, spin, true);
+    ctx.strokeStyle = `rgba(255, 100, 50, ${clamp(0.15 + beatPulse * 0.2, 0, 0.5)})`;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = "rgba(255, 100, 50, 0.5)";
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+    traceRing(ctx, cx, cy, smoothData, BINS, waveBase, waveAmp, mid + bass, time, spin, true);
+    ctx.strokeStyle = `rgba(255, 216, 154, ${clamp(0.4 + mid * 0.4 + beatPulse * 0.3, 0, 0.85)})`;
+    ctx.lineWidth = 2 + high * 1.5 + beatPulse * 1.5;
+    ctx.shadowColor = "rgba(255, 170, 60, 0.6)";
+    ctx.shadowBlur = 16 + beatPulse * 20;
+    ctx.stroke();
+    ctx.restore();
+    const teeth = 120;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < teeth; i++) {
+      const t = i / teeth;
+      const fi = Math.floor(t * (BINS - 1));
+      const energy = smoothData[fi];
+      if (energy < 0.08) continue;
+      const a = t * Math.PI * 2 - Math.PI / 2 + spin;
+      const len = energy * waveAmp * (0.4 + i % 3 * 0.15);
+      const r0 = waveBase - 4;
+      const r1 = r0 + len;
+      const isTop = Math.abs(t - 0.5) > 0.3;
+      const color = isTop ? `rgba(200, 230, 255, ${0.1 + energy * 0.4})` : `rgba(255, 180, 80, ${0.1 + energy * 0.5})`;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = i % 4 === 0 ? 1.6 : 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      ctx.lineTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      ctx.stroke();
+    }
+    ctx.restore();
+    const { waveform } = frame2;
+    const steps = 128;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const wi = Math.floor(t * (waveform.length - 1));
+      const sample = (waveform[wi] - 128) / 128;
+      const a = t * Math.PI * 2 - Math.PI / 2;
+      const r = baseR * 1.05 + sample * baseR * (0.1 + bass * 0.12);
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(243, 230, 208, ${0.14 + bass * 0.25})`;
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+  }
+
+  // src/visual/particles.ts
+  var ParticleSystem = class {
+    constructor(capacity = 2800) {
+      __publicField(this, "pool", []);
+      __publicField(this, "reduced", false);
+      __publicField(this, "emitAcc", 0);
+      __publicField(this, "sparkAcc", 0);
+      for (let i = 0; i < capacity; i++) {
+        this.pool.push({
+          alive: false,
+          kind: "dust",
+          x: 0,
+          y: 0,
+          px: 0,
+          py: 0,
+          vx: 0,
+          vy: 0,
+          life: 0,
+          maxLife: 1,
+          size: 1,
+          hue: 0,
+          glow: 1,
+          spin: 0
+        });
+      }
+    }
+    setReducedMotion(value) {
+      this.reduced = value;
+    }
+    acquire() {
+      return this.pool.find((q) => !q.alive) ?? null;
+    }
+    spawn(cx, cy, baseR, kind, speed, size, life, spread = Math.PI * 2, angle0 = Math.random() * Math.PI * 2) {
+      const p = this.acquire();
+      if (!p) return;
+      const a = angle0 + (Math.random() - 0.5) * spread;
+      const r0 = kind === "dust" ? baseR * (0.85 + Math.random() * 0.45) : kind === "ember" ? baseR * (0.95 + Math.random() * 0.2) : baseR * (1.05 + Math.random() * 0.35);
+      p.alive = true;
+      p.kind = kind;
+      p.x = cx + Math.cos(a) * r0;
+      p.y = cy + Math.sin(a) * r0;
+      p.px = p.x;
+      p.py = p.y;
+      const s = speed * (0.65 + Math.random() * 0.7);
+      const tx = -Math.sin(a);
+      const ty = Math.cos(a);
+      const tangential = kind === "streak" ? 0.55 : kind === "spark" ? 0.35 : kind === "ember" ? 0.2 : 0.28;
+      p.vx = Math.cos(a) * s + tx * s * tangential;
+      p.vy = Math.sin(a) * s + ty * s * tangential;
+      p.maxLife = life;
+      p.life = life;
+      p.size = size;
+      p.hue = Math.random();
+      p.glow = kind === "ember" ? 1.8 : kind === "spark" ? 1.4 : kind === "streak" ? 1.1 : 0.85;
+      p.spin = (Math.random() - 0.5) * (kind === "streak" ? 8 : 3);
+    }
+    update(cx, cy, baseR, frame2) {
+      const { bass, mid, high, bassPulse, midPulse, highPulse, beatPulse, dt } = frame2;
+      const rateMul = this.reduced ? 0.22 : 1;
+      this.emitAcc += (2 + mid * 15 + high * 10 + bass * 5) * rateMul * dt;
+      while (this.emitAcc >= 1) {
+        this.emitAcc -= 1;
+        const roll = Math.random();
+        if (roll < 0.6) {
+          this.spawn(
+            cx,
+            cy,
+            baseR * 1.15,
+            "dust",
+            20 + mid * 40,
+            0.8 + Math.random(),
+            0.8 + Math.random() * 1.1
+          );
+        } else {
+          this.spawn(
+            cx,
+            cy,
+            baseR * 1.1,
+            "ember",
+            20 + bass * 40,
+            1.5 + Math.random() * 2,
+            1 + Math.random() * 0.9
+          );
+        }
+      }
+      this.sparkAcc += (high * 15 + highPulse * 80) * rateMul * dt;
+      while (this.sparkAcc >= 1) {
+        this.sparkAcc -= 1;
+        const isStreak = Math.random() < 0.3;
+        this.spawn(
+          cx,
+          cy,
+          baseR * (1.2 + Math.random() * 0.5),
+          isStreak ? "streak" : "spark",
+          90 + high * 200,
+          0.8 + Math.random() * 1.4,
+          0.3 + Math.random() * 0.4,
+          isStreak ? Math.PI * 2 : Math.PI * 0.35,
+          Math.random() * Math.PI * 2
+        );
+      }
+      for (const p of this.pool) {
+        if (!p.alive) continue;
+        p.px = p.x;
+        p.py = p.y;
+        const dx = p.x - cx;
+        const dy = p.y - cy;
+        const dist = Math.hypot(dx, dy) || 1;
+        const tx = -dy / dist;
+        const ty = dx / dist;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const swirl = (p.kind === "dust" ? 22 : p.kind === "ember" ? 14 : 30) + mid * 50 + bass * 12 + bassPulse * 28;
+        const outward = (8 + high * 20 + beatPulse * 30) * (p.kind === "streak" ? 1.4 : 1);
+        p.vx += tx * swirl * dt + nx * outward * dt + (Math.random() - 0.5) * high * 40 * dt;
+        p.vy += ty * swirl * dt + ny * outward * dt + (Math.random() - 0.5) * high * 40 * dt;
+        const curl = Math.sin(dist * 0.02 + frame2.time * 2 + p.hue * 6) * (12 + mid * 20);
+        p.vx += -ny * curl * dt * 0.15;
+        p.vy += nx * curl * dt * 0.15;
+        const drag = p.kind === "streak" ? 0.985 : p.kind === "spark" ? 0.988 : 0.993 - midPulse * 2e-3 - highPulse * 1e-3;
+        p.vx *= drag;
+        p.vy *= drag;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        p.size *= p.kind === "ember" ? 0.997 : 0.9985;
+        if (p.life <= 0 || dist > baseR * 7.5) p.alive = false;
+      }
+    }
+    burst(cx, cy, baseR, kind) {
+      const count = this.reduced ? kind === "bass" ? 28 : 14 : kind === "bass" ? 90 : kind === "mid" ? 60 : 48;
+      for (let i = 0; i < count; i++) {
+        if (kind === "bass") {
+          const roll = Math.random();
+          if (roll < 0.45) {
+            this.spawn(cx, cy, baseR * 1, "ember", 100 + Math.random() * 160, 2.5 + Math.random() * 3.5, 1 + Math.random() * 0.7);
+          } else if (roll < 0.8) {
+            this.spawn(cx, cy, baseR * 1.1, "dust", 80 + Math.random() * 140, 1.5 + Math.random() * 2, 0.9 + Math.random() * 0.6);
+          } else {
+            this.spawn(cx, cy, baseR * 1.15, "streak", 160 + Math.random() * 180, 2 + Math.random() * 2, 0.45 + Math.random() * 0.35);
+          }
+        } else if (kind === "mid") {
+          this.spawn(
+            cx,
+            cy,
+            baseR * 1.2,
+            Math.random() < 0.5 ? "spark" : "dust",
+            110 + Math.random() * 150,
+            1.4 + Math.random() * 2,
+            0.55 + Math.random() * 0.5
+          );
+        } else {
+          this.spawn(
+            cx,
+            cy,
+            baseR * 1.3,
+            Math.random() < 0.6 ? "spark" : "streak",
+            150 + Math.random() * 220,
+            0.9 + Math.random() * 1.4,
+            0.3 + Math.random() * 0.4
+          );
+        }
+      }
+    }
+    draw(ctx) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const p of this.pool) {
+        if (!p.alive) continue;
+        const t = clamp(p.life / p.maxLife, 0, 1);
+        const alpha = clamp(t * (p.kind === "dust" ? 0.7 : 0.95), 0, 0.95);
+        const warm = p.hue < 0.62;
+        let r, g, b;
+        if (p.kind === "spark" || p.kind === "streak") {
+          r = 200 + p.hue * 55;
+          g = 230 + p.hue * 25;
+          b = 255;
+        } else {
+          r = 255;
+          g = warm ? 150 + p.hue * 70 : 210;
+          b = warm ? 70 + p.hue * 40 : 170;
+        }
+        if (p.kind === "streak" || p.kind === "spark") {
+          ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 0.55})`;
+          ctx.lineWidth = Math.max(0.6, p.size * 0.45 * t);
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(p.px, p.py);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+        }
+        const radius = p.size * (0.55 + t * 0.9) * (p.kind === "ember" ? 1.25 : 1);
+        if (p.glow > 1 || p.kind === "ember") {
+          const grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, radius * 3.2);
+          grd.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha * 0.45 * p.glow})`);
+          grd.addColorStop(0.4, `rgba(${r}, ${Math.floor(g * 0.7)}, 40, ${alpha * 0.18})`);
+          grd.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = grd;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius * 3.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = `rgba(${r}, ${Math.min(255, g + 30)}, ${Math.min(220, b + 40)}, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        if (p.kind !== "dust") {
+          ctx.fillStyle = p.kind === "spark" || p.kind === "streak" ? `rgba(255, 255, 255, ${alpha * 0.95})` : `rgba(255, 245, 220, ${alpha * 0.85})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, Math.max(0.4, radius * 0.35), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+  };
+
+  // src/visual/shockwave.ts
+  var ShockwaveSystem = class {
+    constructor(capacity = 24) {
+      __publicField(this, "waves", []);
+      __publicField(this, "reduced", false);
+      for (let i = 0; i < capacity; i++) {
+        this.waves.push({
+          alive: false,
+          radius: 0,
+          maxRadius: 0,
+          width: 2,
+          alpha: 0,
+          speed: 0,
+          kind: "bass"
+        });
+      }
+    }
+    setReducedMotion(value) {
+      this.reduced = value;
+    }
+    spawn(kind, baseR) {
+      if (this.reduced && kind === "high") return;
+      const w = this.waves.find((q) => !q.alive);
+      if (!w) return;
+      w.alive = true;
+      w.kind = kind;
+      w.radius = baseR * (kind === "bass" ? 0.9 : kind === "mid" ? 1.1 : 1.2);
+      w.maxRadius = baseR * (kind === "bass" ? 4.5 : kind === "mid" ? 3.5 : 2.5);
+      w.width = kind === "bass" ? 12 : kind === "mid" ? 6 : 3;
+      w.alpha = kind === "bass" ? 0.85 : kind === "mid" ? 0.6 : 0.45;
+      w.speed = baseR * (kind === "bass" ? 4 : kind === "mid" ? 4.5 : 5);
+    }
+    update(dt) {
+      for (const w of this.waves) {
+        if (!w.alive) continue;
+        w.radius += w.speed * dt;
+        const progress = w.radius / w.maxRadius;
+        w.alpha *= Math.exp(-dt * (2.5 + progress * 3));
+        w.width *= 0.985;
+        if (w.radius >= w.maxRadius || w.alpha < 0.02) w.alive = false;
+      }
+    }
+    draw(ctx, cx, cy, _frame) {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      for (const w of this.waves) {
+        if (!w.alive) continue;
+        const a = clamp(w.alpha, 0, 1);
+        if (w.kind === "bass") {
+          ctx.strokeStyle = `rgba(255, 170, 70, ${a})`;
+          ctx.shadowColor = "rgba(255, 140, 40, 0.8)";
+          ctx.shadowBlur = 24;
+        } else if (w.kind === "mid") {
+          ctx.strokeStyle = `rgba(255, 220, 160, ${a})`;
+          ctx.shadowColor = "rgba(255, 200, 120, 0.7)";
+          ctx.shadowBlur = 14;
+        } else {
+          ctx.strokeStyle = `rgba(255, 240, 210, ${a * 0.85})`;
+          ctx.shadowColor = "rgba(255, 230, 180, 0.5)";
+          ctx.shadowBlur = 8;
+        }
+        ctx.lineWidth = w.width;
+        ctx.beginPath();
+        ctx.arc(cx, cy, w.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        if (w.kind === "bass") {
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = `rgba(255, 236, 200, ${a * 0.35})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, w.radius * 0.92, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  };
+
+  // src/visual/renderer.ts
+  var VisualRenderer = class {
+    constructor(canvas2) {
+      this.canvas = canvas2;
+      __publicField(this, "ctx");
+      __publicField(this, "particles", new ParticleSystem(2800));
+      __publicField(this, "shocks", new ShockwaveSystem(28));
+      __publicField(this, "stars", []);
+      __publicField(this, "w", 0);
+      __publicField(this, "h", 0);
+      __publicField(this, "dpr", 1);
+      __publicField(this, "smooth", { bass: 0, lowMid: 0, mid: 0, high: 0, overall: 0, rms: 0 });
+      __publicField(this, "env", { brightness: 0, deform: 0, bg: 0 });
+      __publicField(this, "reduced", false);
+      __publicField(this, "smoothness", 0.7);
+      const ctx = canvas2.getContext("2d", { alpha: true });
+      if (!ctx) throw new Error("Canvas 2D unavailable");
+      this.ctx = ctx;
+      this.reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      this.particles.setReducedMotion(this.reduced);
+      this.shocks.setReducedMotion(this.reduced);
+      for (let i = 0; i < (this.reduced ? 40 : 120); i++) {
+        this.stars.push({
+          x: Math.random(),
+          y: Math.random(),
+          z: Math.random(),
+          s: 0.4 + Math.random() * 1.4
+        });
+      }
+    }
+    resize() {
+      this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this.w = window.innerWidth;
+      this.h = window.innerHeight;
+      this.canvas.width = Math.floor(this.w * this.dpr);
+      this.canvas.height = Math.floor(this.h * this.dpr);
+      this.canvas.style.width = `${this.w}px`;
+      this.canvas.style.height = `${this.h}px`;
+      this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    }
+    setSmoothness(value) {
+      this.smoothness = value;
+    }
+    render(audio, onset2, time, dt, playing) {
+      const ctx = this.ctx;
+      const cx = this.w * 0.5;
+      const cy = this.h * 0.46;
+      const baseR = Math.min(this.w, this.h) * 0.16;
+      if (audio) {
+        const attackBase = lerp(10, 60, this.smoothness);
+        const releaseBase = lerp(100, 400, this.smoothness);
+        this.smooth.bass = attackRelease(this.smooth.bass, audio.bass, attackBase, releaseBase, dt);
+        this.smooth.lowMid = attackRelease(this.smooth.lowMid, audio.lowMid, attackBase, releaseBase, dt);
+        this.smooth.mid = attackRelease(this.smooth.mid, audio.mid, attackBase, releaseBase, dt);
+        this.smooth.high = attackRelease(this.smooth.high, audio.high, attackBase, releaseBase, dt);
+        this.smooth.overall = attackRelease(this.smooth.overall, audio.overall, attackBase * 2, releaseBase * 2, dt);
+        this.smooth.rms = attackRelease(this.smooth.rms, audio.rms, attackBase * 2, releaseBase * 2, dt);
+        this.env.brightness = attackRelease(this.env.brightness, audio.rms, 30, 200, dt);
+        this.env.deform = attackRelease(this.env.deform, audio.bass, 60, 400, dt);
+        this.env.bg = attackRelease(this.env.bg, audio.overall, 200, 1e3, dt);
+      } else {
+        const breath = 0.08 + 0.05 * Math.sin(time * 1.2);
+        this.smooth.bass = lerp(this.smooth.bass, breath, 0.05);
+        this.smooth.lowMid = lerp(this.smooth.lowMid, breath * 0.9, 0.05);
+        this.smooth.mid = lerp(this.smooth.mid, breath * 0.8, 0.05);
+        this.smooth.high = lerp(this.smooth.high, breath * 0.5, 0.05);
+        this.smooth.overall = lerp(this.smooth.overall, breath, 0.05);
+        this.smooth.rms = lerp(this.smooth.rms, breath, 0.05);
+        this.env.brightness = lerp(this.env.brightness, breath, 0.05);
+        this.env.deform = lerp(this.env.deform, breath, 0.05);
+        this.env.bg = lerp(this.env.bg, breath, 0.05);
+      }
+      const frame2 = {
+        bass: this.smooth.bass,
+        lowMid: this.smooth.lowMid,
+        mid: this.smooth.mid,
+        high: this.smooth.high,
+        overall: this.smooth.overall,
+        rms: this.smooth.rms,
+        bassPulse: onset2?.bassPulse ?? 0,
+        lowMidPulse: onset2?.lowMidPulse ?? 0,
+        midPulse: onset2?.midPulse ?? 0,
+        highPulse: onset2?.highPulse ?? 0,
+        beatPulse: onset2?.beatPulse ?? 0,
+        frequency: audio?.frequency ?? idleSpectrum(time),
+        waveform: audio?.waveform ?? idleWave(time),
+        time,
+        dt
+      };
+      ctx.globalCompositeOperation = "source-over";
+      const trailAlpha = playing ? lerp(0.28, 0.45, this.env.bg) : 0.45;
+      ctx.fillStyle = `rgba(5, 4, 3, ${trailAlpha})`;
+      ctx.fillRect(0, 0, this.w, this.h);
+      this.drawStars(ctx, frame2);
+      if (onset2?.bass) this.shocks.spawn("bass", baseR);
+      if (onset2?.mid) this.shocks.spawn("mid", baseR);
+      if (onset2?.high) this.shocks.spawn("high", baseR);
+      if (onset2?.bass) this.particles.burst(cx, cy, baseR, "bass");
+      if (onset2?.mid) this.particles.burst(cx, cy, baseR, "mid");
+      if (onset2?.high) this.particles.burst(cx, cy, baseR, "high");
+      this.shocks.update(dt);
+      this.particles.update(cx, cy, baseR, frame2);
+      this.shocks.draw(ctx, cx, cy, frame2);
+      drawCircularWaveform(ctx, cx, cy, baseR, frame2);
+      drawCoreAndRings(ctx, cx, cy, baseR, frame2);
+      this.particles.draw(ctx);
+      const vig = ctx.createRadialGradient(cx, cy, baseR * 0.5, cx, cy, Math.max(this.w, this.h) * 0.72);
+      vig.addColorStop(0, "rgba(0,0,0,0)");
+      vig.addColorStop(1, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, this.w, this.h);
+    }
+    drawStars(ctx, frame2) {
+      const drift = frame2.time * 0.01;
+      for (const star of this.stars) {
+        const x = (star.x + drift * (0.02 + star.z * 0.04)) % 1 * this.w;
+        const y = star.y * this.h;
+        const a = 0.15 + star.z * 0.35 + frame2.high * 0.2;
+        ctx.fillStyle = `rgba(243, 230, 208, ${a})`;
+        ctx.beginPath();
+        ctx.arc(x, y, star.s * (0.6 + frame2.high * 0.5), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  };
+  var idleFreq = new Uint8Array(1024);
+  var idleWaveBuf = new Uint8Array(2048);
+  function idleSpectrum(time) {
+    for (let i = 0; i < idleFreq.length; i++) {
+      const t = i / idleFreq.length;
+      idleFreq[i] = Math.floor(
+        (28 + 22 * Math.sin(time * 1.6 + t * 14) + 16 * Math.sin(time * 0.9 + t * 5) + 10 * Math.sin(time * 2.4 + t * 28) + 8 * Math.sin(time * 0.4 + t * 2.2)) * (1 - t * 0.55)
+      );
+    }
+    return idleFreq;
+  }
+  function idleWave(time) {
+    for (let i = 0; i < idleWaveBuf.length; i++) {
+      const t = i / idleWaveBuf.length;
+      idleWaveBuf[i] = Math.floor(128 + 18 * Math.sin(time * 2 + t * Math.PI * 8));
+    }
+    return idleWaveBuf;
+  }
+
+  // src/main.ts
+  function mustEl(sel) {
+    const el = document.querySelector(sel);
+    if (!el) throw new Error(`\u7F3A\u5C11\u5143\u7D20: ${sel}`);
+    return el;
+  }
+  var canvas = mustEl("#stage");
+  var fileInput = mustEl("#fileInput");
+  var playBtn = mustEl("#playBtn");
+  var iconPlay = mustEl("#icon-play");
+  var iconPause = mustEl("#icon-pause");
+  var seek = mustEl("#seek");
+  var trackName = mustEl("#trackName");
+  var timeCurrent = mustEl("#timeCurrent");
+  var timeTotal = mustEl("#timeTotal");
+  var sensitivity = mustEl("#sensitivity");
+  var smoothness = mustEl("#smoothness");
+  var dropHint = mustEl("#dropHint");
+  var dock = mustEl("#dock");
+  var engine = new AudioEngine();
+  var onset = new OnsetDetector();
+  var renderer = new VisualRenderer(canvas);
+  var hasTrack = false;
+  var seeking = false;
+  var lastTs = performance.now();
+  function formatTime(sec) {
+    if (!Number.isFinite(sec) || sec < 0) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  }
+  function setPlayLabel() {
+    if (engine.playing) {
+      iconPlay.style.display = "none";
+      iconPause.style.display = "block";
+    } else {
+      iconPlay.style.display = "block";
+      iconPause.style.display = "none";
+    }
+  }
+  function isAudioFile(file) {
+    if (file.type.startsWith("audio/")) return true;
+    return /\.(mp3|wav|ogg|flac|m4a|aac|opus|webm)$/i.test(file.name);
+  }
+  async function loadFile(file) {
+    if (!isAudioFile(file)) {
+      trackName.textContent = "\u8BF7\u9009\u62E9\u97F3\u9891\u6587\u4EF6";
+      return;
+    }
+    await engine.loadFile(file);
+    hasTrack = true;
+    trackName.textContent = file.name;
+    playBtn.disabled = false;
+    seek.disabled = false;
+    dropHint.classList.add("is-hidden");
+    timeTotal.textContent = formatTime(engine.duration);
+    seek.value = "0";
+    await engine.play();
+    setPlayLabel();
+    resetHideTimeout();
+  }
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    void loadFile(file).catch((err) => {
+      console.error(err);
+      trackName.textContent = "\u52A0\u8F7D\u5931\u8D25\uFF0C\u8BF7\u6362\u4E00\u4E2A\u6587\u4EF6";
+    });
+  });
+  playBtn.addEventListener("click", () => {
+    void (async () => {
+      if (!hasTrack) return;
+      if (engine.playing) {
+        engine.pause();
+      } else {
+        await engine.play();
+      }
+      setPlayLabel();
+      resetHideTimeout();
+    })();
+  });
+  seek.addEventListener("pointerdown", () => {
+    seeking = true;
+  });
+  seek.addEventListener("pointerup", () => {
+    seeking = false;
+    if (!hasTrack) return;
+    const t = Number(seek.value) / 1e3 * engine.duration;
+    engine.seek(t);
+  });
+  seek.addEventListener("input", () => {
+    if (!hasTrack) return;
+    const t = Number(seek.value) / 1e3 * engine.duration;
+    timeCurrent.textContent = formatTime(t);
+  });
+  sensitivity.addEventListener("input", () => {
+    onset.setSensitivity(Number(sensitivity.value));
+  });
+  onset.setSensitivity(Number(sensitivity.value));
+  smoothness.addEventListener("input", () => {
+    renderer.setSmoothness(Number(smoothness.value));
+  });
+  renderer.setSmoothness(Number(smoothness.value));
+  var hideTimeout = 0;
+  function resetHideTimeout() {
+    dock.classList.remove("is-hidden");
+    window.clearTimeout(hideTimeout);
+    hideTimeout = window.setTimeout(() => {
+      if (hasTrack && engine.playing) {
+        dock.classList.add("is-hidden");
+      }
+    }, 2500);
+  }
+  window.addEventListener("mousemove", resetHideTimeout);
+  window.addEventListener("pointerdown", resetHideTimeout);
+  resetHideTimeout();
+  engine.audio.addEventListener("ended", () => {
+    setPlayLabel();
+    dock.classList.remove("is-hidden");
+  });
+  engine.audio.addEventListener("loadedmetadata", () => {
+    timeTotal.textContent = formatTime(engine.duration);
+  });
+  function onDrag(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  ["dragenter", "dragover", "dragleave", "drop"].forEach((evt) => {
+    document.addEventListener(evt, onDrag);
+    window.addEventListener(evt, onDrag);
+  });
+  document.addEventListener("drop", (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    void loadFile(file).catch((err) => {
+      console.error(err);
+      trackName.textContent = "\u52A0\u8F7D\u5931\u8D25\uFF0C\u8BF7\u6362\u4E00\u4E2A\u6587\u4EF6";
+    });
+  });
+  function onResize() {
+    renderer.resize();
+  }
+  window.addEventListener("resize", onResize);
+  onResize();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastTs) / 1e3);
+    lastTs = now;
+    const t = now / 1e3;
+    const audio = hasTrack ? engine.sample() : null;
+    let onsetState = null;
+    if (audio && engine.playing) {
+      onsetState = onset.update(
+        {
+          bass: audio.bass,
+          lowMid: audio.lowMid,
+          mid: audio.mid,
+          high: audio.high
+        },
+        now,
+        dt
+      );
+    }
+    renderer.render(audio, onsetState, t, dt, engine.playing);
+    if (hasTrack && !seeking) {
+      const dur = engine.duration || 1;
+      seek.value = String(Math.floor(engine.currentTime / dur * 1e3));
+      timeCurrent.textContent = formatTime(engine.currentTime);
+      timeTotal.textContent = formatTime(engine.duration);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+    </script>
+  </body>
+</html>

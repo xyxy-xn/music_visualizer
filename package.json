@@ -1,0 +1,17 @@
+{
+  "name": "music_visualizer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && node scripts/build-standalone.mjs",
+    "build:standalone": "node scripts/build-standalone.mjs",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "typescript": "~5.7.2",
+    "vite": "^5.4.11"
+  }
+}

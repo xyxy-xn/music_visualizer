@@ -1,0 +1,236 @@
+:root {
+  --bg-0: #050403;
+  --bg-1: #0c0a08;
+  --gold: #e8b86a;
+  --gold-bright: #ffd89a;
+  --gold-dim: #8a6a3a;
+  --amber: #c8792e;
+  --cream: #f3e6d0;
+  --ink: #1a1510;
+  --glass: rgba(232, 184, 106, 0.08);
+  --line: rgba(232, 184, 106, 0.22);
+  --dock-bg: rgba(8, 6, 4, 0.72);
+  --font-display: "Syne", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg-0);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  overflow: hidden;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 45%, #1a1208 0%, transparent 55%),
+    radial-gradient(ellipse 100% 100% at 50% 100%, #120c06 0%, var(--bg-0) 55%);
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.drop-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.drop-hint.is-hidden {
+  opacity: 0;
+}
+
+.drop-hint__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  color: var(--cream);
+  letter-spacing: 0.04em;
+}
+
+.drop-hint__meta {
+  margin: 0.6rem 0 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  color: var(--gold-dim);
+}
+
+.dock {
+  position: absolute;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: min(920px, calc(100% - 2rem));
+  padding: 0.85rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--dock-bg);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.dock.is-hidden {
+  opacity: 0;
+  transform: translate(-50%, 1rem);
+  pointer-events: none;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  color: var(--gold-bright);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(232, 184, 106, 0.15);
+  border-color: rgba(232, 184, 106, 0.4);
+  color: #fff;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: rgba(232, 184, 106, 0.25);
+  border-color: rgba(232, 184, 106, 0.6);
+}
+
+.secondary-btn {
+  font-size: 0.7rem;
+  padding: 0.45rem 0.75rem;
+  background: transparent;
+  border-color: transparent;
+  color: var(--gold-dim);
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--gold);
+}
+
+.btn:hover:not(:disabled) {
+  background: rgba(232, 184, 106, 0.18);
+  border-color: rgba(232, 184, 106, 0.45);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.track {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+}
+
+.track__name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--gold-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seek {
+  width: 100%;
+  accent-color: var(--gold);
+  height: 0.45rem;
+  cursor: pointer;
+}
+
+.track__time {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--gold-dim);
+}
+
+.controls-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.sens {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  min-width: 5rem;
+}
+
+.sens input {
+  width: 100%;
+  accent-color: var(--amber);
+}
+
+@media (max-width: 720px) {
+  .dock {
+    flex-wrap: wrap;
+    border-radius: 1.25rem;
+    justify-content: center;
+  }
+
+  .sens {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop-hint {
+    transition: none;
+  }
+}
